@@ -168,64 +168,99 @@ def models(world, condition):
     
     The return value of this function should be True if the condition holds in the given world, and False otherwise.
     """
-    result = checkTree(world, condition.getRoot(), condition)
+    result = checkTree(world, condition.getRoot(), condition, [])
 
     return result    
 
-def checkTree(world, currentNode, tree):
+def checkTree(world, currentNode, tree, substitutes):
 
     if currentNode.value == "and":
         for subtree in currentNode.children:
-            if not checkTree(world, subtree, tree):
+            if not checkTree(world, subtree, tree, substitutes):
                 print("AND: False")
                 return False
         print("AND: True")
         return True
     elif currentNode.value == "or":
         for subtree in currentNode.children:
-            if checkTree(world, subtree, tree):
+            if checkTree(world, subtree, tree, substitutes):
                 print("OR: True")
                 return True
         print("OR: False")
         return False
     elif currentNode.value == "not":
         print("NOT: ", end="")
-        return not checkTree(world, currentNode.children[0], tree)
+        return not checkTree(world, currentNode.children[0], tree, substitutes)
     elif currentNode.value == "=":
         for subtree in currentNode.children:
-            checkTree(world, subtree, tree)
+            checkTree(world, subtree, tree, substitutes)
         print("Evaluating =")
     elif currentNode.value == "imply":
-        if not checkTree(world, currentNode.children[0], tree):
+        if not checkTree(world, currentNode.children[0], tree, substitutes):
             print("IMPLY: True")
             return True
-        elif checkTree(world, currentNode.children[1], tree):
+        elif checkTree(world, currentNode.children[1], tree, substitutes):
             print("IMPLY: True")
             return True
         print("IMPLY: False")
         return False
     elif currentNode.value == "when":
         for subtree in currentNode.children:
-            checkTree(world, subtree, tree)
+            checkTree(world, subtree, tree, substitutes)
         print("Evaluating when")
     elif currentNode.value == "exists":
-        for subtree in currentNode.children:
-            checkTree(world, subtree, tree)
-        print("Evaluating exists")
+        for values in world[currentNode.children[0].children[0].value]:
+            #print ("changing: " + currentNode.children[0].value + " for: " + values)
+            for x in substitutes:
+                if x[0] == currentNode.children[0].value:
+                    substitutes.remove(x)
+            substitutes.append((currentNode.children[0].value, values))
+            if checkTree(world, currentNode.children[1], tree, substitutes):
+                print("Exists: True")
+                return True
+        print("Exists: False")
+        return False
     elif currentNode.value == "forall":
-        #for values in world[currentNode.children[0].children[0].value]:
-            #newTree = substituteFromSubTree(tree, currentNode.children[0].value, values)
-            #if not checkTree(world, subtree, newTree)
-
-        print(currentNode.children[0].value)
-        print(currentNode.children[0].children[0].value)
+        for values in world[currentNode.children[0].children[0].value]:
+            #print ("changing: " + currentNode.children[0].value + " for: " + values)
+            for x in substitutes:
+                if x[0] == currentNode.children[0].value:
+                    substitutes.remove(x)
+            substitutes.append((currentNode.children[0].value, values))
+            if not checkTree(world, currentNode.children[1], tree, substitutes):
+                print("FORALL: False")
+                return False
+        print("FORALL: True")
+        return True
     else:
+        print(len(substitutes))
         print(currentNode.value + ": ", end="")
         if len(world[currentNode.value]) > 0:
             for tuple in world[currentNode.value]:
                 if tuple[0] == currentNode.children[0].value and tuple[1] == currentNode.children[1].value:
                     print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- TRUE")
                     return True
+                else:
+                    value1 = ""
+                    value2 = ""
+                    for subs in substitutes:
+                        if currentNode.children[0].value == subs[0]:
+                            value1 = subs[1]
+                    if value1 == "":
+                        value1 = currentNode.children[0].value
+
+                    for subs in substitutes:
+                        if currentNode.children[1].value == subs[0]:
+                            value2 = subs[1]
+                    if value2 == "":
+                        value2 = currentNode.children[1].value
+
+                    if tuple[0] == value1 and tuple[1] == value2:
+                        print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- TRUE")
+                        return True
+                    else: 
+                        print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- FALSE")
+
             print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- False")
             return False
         else:
@@ -322,7 +357,7 @@ def applyToWorld(world, currentNode):
         print("Applying imply")
     elif currentNode.value == "when":
         for subtree in currentNode.children:
-            checkTree(world, subtree)
+            applyToWorld(world, subtree)
         print("Applying when")
     elif currentNode.value == "exists":
         for subtree in currentNode.children:
@@ -387,14 +422,18 @@ if __name__ == "__main__":
     print("Should be False: ", end="")
     print("---------------------------------------------------------------------")
 
-    '''
+    
     move_minny = make_expression(("and", ("at", "store", "minny"), ("not", ("at", "airport", "minny"))))
     
     movedworld = apply(friendsworld, move_minny)
-    print("Should be True: ", end="")
+    
     print(models(movedworld, exp))
-    
-    
+    print("Should be True: ", end="")
+    print("---------------------------------------------------------------------")
+    print("---------------------------------------------------------------------")
+
+
+    '''
     move_both_cond = make_expression(("and", 
                                            ("at", "home", "mickey"), 
                                            ("not", ("at", "store", "mickey")), 
@@ -408,8 +447,10 @@ if __name__ == "__main__":
     print("Should be True: ", end="")
     print(models(apply(movedworld, move_both_cond), exp))
     
-    print("Should be False: ", end="")
+
     print(models(apply(friendsworld, move_both_cond), exp))
+    print("Should be False: ", end="")
+
     
     exp1 = make_expression(("forall", 
                             ("?l", "-", "Locations"),
