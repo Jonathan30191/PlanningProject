@@ -213,9 +213,9 @@ def checkTree(world, currentNode, tree):
             checkTree(world, subtree, tree)
         print("Evaluating exists")
     elif currentNode.value == "forall":
-        for values in world[currentNode.children[0].children[0].value]:
-            newTree = substituteFromSubTree(tree, currentNode.children[0].value, values)
-            if not checkTree(world, subtree, newTree)
+        #for values in world[currentNode.children[0].children[0].value]:
+            #newTree = substituteFromSubTree(tree, currentNode.children[0].value, values)
+            #if not checkTree(world, subtree, newTree)
 
         print(currentNode.children[0].value)
         print(currentNode.children[0].children[0].value)
