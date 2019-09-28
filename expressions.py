@@ -178,37 +178,44 @@ def checkTree(world, currentNode, tree, substitutes):
     if currentNode.value == "and":
         for subtree in currentNode.children:
             if subtree.value == "when":
-                pass
+                print(world)
+                print(currentNode.children[0].value)
+                if checkTree(world, currentNode.children[0], tree, substitutes):
+                    print("when true")
+                    applyToWorld(world, subtree)
             elif not checkTree(world, subtree, tree, substitutes):
-                #print("AND: False")
+                print("AND: False")
                 return False
-        #print("AND: True")
+        print("AND: True")
         return True
     elif currentNode.value == "or":
         for subtree in currentNode.children:
             if checkTree(world, subtree, tree, substitutes):
-                #print("OR: True")
+                print("OR: True")
                 return True
-        #print("OR: False")
+        print("OR: False")
         return False
     elif currentNode.value == "not":
-        #print("NOT: ", end="")
+        print("NOT: ", end="")
         return not checkTree(world, currentNode.children[0], tree, substitutes)
     elif currentNode.value == "=":
         for subtree in currentNode.children:
             checkTree(world, subtree, tree, substitutes)
-        #print("Evaluating =")
+        print("Evaluating =")
     elif currentNode.value == "imply":
+        print(currentNode.children[0].children[0].value + " " + currentNode.children[0].value + " " + currentNode.children[0].children[1].value +  " implies " + currentNode.children[1].children[0].value + " " + currentNode.children[1].value + " " + currentNode.children[1].children[1].value)
         if not checkTree(world, currentNode.children[0], tree, substitutes):
-            #print("IMPLY: True")
+            print(currentNode.children[0].value)
+            print(" True Q")
             return True
         elif checkTree(world, currentNode.children[1], tree, substitutes):
-            #print("IMPLY: True")
+            print(currentNode.children[1].value)
+            print(" True P")
             return True
-       # print("IMPLY: False")
+        print(" False")
         return False
     elif currentNode.value == "when":
-       # print("Evaluating when")
+        #print("Evaluating when")
         #send to Apply
         return None
     elif currentNode.value == "exists":
@@ -231,9 +238,9 @@ def checkTree(world, currentNode, tree, substitutes):
                     substitutes.remove(x)
             substitutes.append((currentNode.children[0].value, values))
             if not checkTree(world, currentNode.children[1], tree, substitutes):
-               # print("FORALL: False")
+                print("FORALL: False")
                 return False
-       # print("FORALL: True")
+        print("FORALL: True")
         return True
     else:
        # print(len(substitutes))
@@ -241,7 +248,7 @@ def checkTree(world, currentNode, tree, substitutes):
         if len(world[currentNode.value]) > 0:
             for tuple in world[currentNode.value]:
                 if tuple[0] == currentNode.children[0].value and tuple[1] == currentNode.children[1].value:
-                    #print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- TRUE")
+                    print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- TRUE")
                     return True
                 else:
                     value1 = ""
@@ -259,12 +266,12 @@ def checkTree(world, currentNode, tree, substitutes):
                         value2 = currentNode.children[1].value
 
                     if tuple[0] == value1 and tuple[1] == value2:
-                       # print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- TRUE")
+                        print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- TRUE")
                         return True
                     else: 
-                        pass#print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- FALSE")
+                        print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- FALSE")
 
-           # print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- False")
+            print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- False")
             return False
         else:
             return False
@@ -359,9 +366,8 @@ def applyToWorld(world, currentNode):
             checkTree(world, subtree)
         #print("Applying imply")
     elif currentNode.value == "when":
-        for subtree in currentNode.children:
-            applyToWorld(world, subtree)
-        #print("Applying when")
+        print("Applying when")
+        applyToWorld(world, currentNode.children[1])
     elif currentNode.value == "exists":
         for subtree in currentNode.children:
             checkTree(world, subtree)
@@ -447,15 +453,16 @@ if __name__ == "__main__":
                                                       ("not", ("at", "store", "minny"))))))
                                                       
     
-    
+    print(movedworld)
     print(models(apply(movedworld, move_both_cond), exp))
     print("Should be True: ", end="")
+    print(movedworld)
     print("---------------------------------------------------------------------")
-    '''
+    
     print(models(apply(friendsworld, move_both_cond), exp))
     print("Should be False: ", end="")
     print("---------------------------------------------------------------------")
-    
+    '''
     
     exp1 = make_expression(("forall", 
                             ("?l", "-", "Locations"),

@@ -1,5 +1,22 @@
 import graph
+from queue import PriorityQueue
 
+class Path():
+       def __init__(self, priority, pathCost, node):
+           self.priority = priority
+           self.node = node
+           self.nodesVisited = 0
+           self.currentPathCost = pathCost
+           self.previousNodes = {node.get_id()}
+
+       def __cmp__(self, other):
+           return cmp(self.priority, other.priority)
+       def __eq__(self, other):
+            return self.priority == other.priority
+       def __lt__(self, other):
+            return self.priority < other.priority
+       
+   
 def default_heuristic(n, edge):
     """
     Default heuristic for A*. Do not change, rename or remove!
@@ -26,7 +43,59 @@ def astar(start, heuristic, goal):
         - visited is the total number of nodes that were added to the frontier during the execution of the algorithm 
         - expanded is the total number of nodes that were expanded (i.e. whose neighbors were added to the frontier)
     """
-    return [],0,0,0
+
+    startingPathCost = 0
+    startingHeuristic = heuristic(start, start.get_neighbors()[0])
+    startingPriority = startingPathCost + startingHeuristic
+    
+    startingPath = Path(startingPriority, startingPathCost, start)
+    startingPath.previousNodes.add(startingPath.node.get_id())
+
+    possiblePaths = PriorityQueue()
+    possiblePaths.put(startingPath)
+
+    visitedRoads = {}
+
+    priorityNode = possiblePaths.get()
+
+    expandedNodes = 0
+
+    while not goal(priorityNode.node):
+
+        expandedNodes = expandedNodes + 1
+
+        for edges in priorityNode.node.get_neighbors():
+
+            if edges.name not in visitedRoads:
+                visitedRoads[edges.name] = edges.cost
+                currentPathCost = priorityNode.currentPathCost + edges.cost
+                currentHeuristic = heuristic(priorityNode.node, edges)
+                currentPriority = currentPathCost + currentHeuristic
+
+                currentPath = Path(currentPriority, currentPathCost, edges.target)
+                currentPath.nodesVisited = priorityNode.nodesVisited + 1 
+                currentPath.previousNodes =  priorityNode.previousNodes
+
+                #print("adding ", end='')
+                #print(edges.name)
+                #print(edges.name)
+                possiblePaths.put(currentPath)
+
+            #print(visitedRoads)
+        
+        priorityNode = possiblePaths.get()
+        #print(possiblePaths.get().node.get_id())
+        #print(possiblePaths.get().node.get_id())
+    
+    #print("FOUND: ", end='')
+    #print(priorityNode.node.get_id())
+    #print(priorityNode.currentPathCost)
+    #print(priorityNode.nodesVisited)
+
+    print(priorityNode.previousNodes)
+
+    return [], priorityNode.currentPathCost, priorityNode.nodesVisited, expandedNodes
+
 
 def print_path(result):
     (path,cost,visited_cnt,expanded_cnt) = result

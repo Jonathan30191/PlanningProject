@@ -1,7 +1,8 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\__pycache__"
   ],
-  "SelectedNode": "\\expressions.py",
+  "SelectedNode": "\\pathfinding.py",
   "PreviewInSolutionExplorer": false
 }
