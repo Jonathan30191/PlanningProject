@@ -1,5 +1,6 @@
 import graph
 from queue import PriorityQueue
+import copy
 
 class Path():
        def __init__(self, priority, pathCost, node):
@@ -7,7 +8,8 @@ class Path():
            self.node = node
            self.nodesVisited = 0
            self.currentPathCost = pathCost
-           self.previousNodes = {node.get_id()}
+           self.visitedNodes = set()
+           self.edgesPassed = []
 
        def __cmp__(self, other):
            return cmp(self.priority, other.priority)
@@ -49,57 +51,51 @@ def astar(start, heuristic, goal):
     startingPriority = startingPathCost + startingHeuristic
     
     startingPath = Path(startingPriority, startingPathCost, start)
-    startingPath.previousNodes.add(startingPath.node.get_id())
 
     possiblePaths = PriorityQueue()
     possiblePaths.put(startingPath)
 
-    visitedRoads = {}
-
     priorityNode = possiblePaths.get()
 
+    priorityNode.visitedNodes.add(priorityNode.node.get_id())
+
     expandedNodes = 0
+    numFrontier = 0
 
     while not goal(priorityNode.node):
-
         expandedNodes = expandedNodes + 1
+
+        #print("------------Expanding: ",end='')    
+        #print(priorityNode.node.get_id())
+        expandedNodesToAdd = []
 
         for edges in priorityNode.node.get_neighbors():
 
-            if edges.name not in visitedRoads:
-                visitedRoads[edges.name] = edges.cost
+            if edges.target.get_id() not in priorityNode.visitedNodes:
+
                 currentPathCost = priorityNode.currentPathCost + edges.cost
                 currentHeuristic = heuristic(priorityNode.node, edges)
                 currentPriority = currentPathCost + currentHeuristic
 
                 currentPath = Path(currentPriority, currentPathCost, edges.target)
                 currentPath.nodesVisited = priorityNode.nodesVisited + 1 
-                currentPath.previousNodes =  priorityNode.previousNodes
-
-                #print("adding ", end='')
-                #print(edges.name)
-                #print(edges.name)
-                possiblePaths.put(currentPath)
-
-            #print(visitedRoads)
+                currentPath.edgesPassed = copy.deepcopy(priorityNode.edgesPassed)
+                currentPath.edgesPassed.append(edges)
+                currentPath.visitedNodes = copy.deepcopy(priorityNode.visitedNodes)
+                expandedNodesToAdd.append(currentPath)
         
+        for nodesToAdd in expandedNodesToAdd:
+            nodesToAdd.visitedNodes.add(priorityNode.node.get_id())
+            possiblePaths.put(nodesToAdd)
         priorityNode = possiblePaths.get()
-        #print(possiblePaths.get().node.get_id())
-        #print(possiblePaths.get().node.get_id())
-    
-    #print("FOUND: ", end='')
-    #print(priorityNode.node.get_id())
-    #print(priorityNode.currentPathCost)
-    #print(priorityNode.nodesVisited)
+        numFrontier = numFrontier + possiblePaths.qsize()
 
-    print(priorityNode.previousNodes)
-
-    return [], priorityNode.currentPathCost, priorityNode.nodesVisited, expandedNodes
+    return priorityNode.edgesPassed, priorityNode.currentPathCost, numFrontier, expandedNodes
 
 
 def print_path(result):
-    (path,cost,visited_cnt,expanded_cnt) = result
-    print("visited nodes:", visited_cnt, "expanded nodes:",expanded_cnt)
+    (path, cost,visited_cnt,expanded_cnt) = result
+    print("Visited nodes: ", visited_cnt, ", Expanded nodes: ", expanded_cnt)
     if path:
         print("Path found with cost", cost)
         for n in path:
@@ -156,7 +152,6 @@ def main():
     
     result = astar(graph.InfNode(1), default_heuristic, multigoal)
     print_path(result)
-    
 
 if __name__ == "__main__":
     main()
