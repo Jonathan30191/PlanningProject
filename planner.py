@@ -26,12 +26,31 @@ def plan(domain, problem, useheuristic=True):
         
     def isgoal(state):
         return True
+
+    #Problem = [typesDictionary, initialStates, rawGoals, ExpressionGoal]
+    #Domain = [actionsDictionary, typesDictionary]
+
+    goal = problem[2]
+    allPossibleActions = []
     
-    start = graph.Node()
-    return pathfinding.astar(start, heuristic if useheuristic else pathfinding.default_heuristic, isgoal)
+    start = graph.PlanNode(problem[1], domain[1], problem[0], [])
+    allPossibleActions = start.set_possibleActions(domain[0])
+    start.set_initialStates()
+    start.get_neighbors(allPossibleActions, domain[0])
+
+    #astar(start, 1, problem[3])
+    
+
+    #print(domain[0])
+
+    return None #pathfinding.astar(start, heuristic if useheuristic else pathfinding.default_heuristic, isgoal)
 
 def main(domain, problem, useheuristic):
+
     t0 = time.time()
+    plan(pddl.parse_domain(domain), pddl.parse_problem(problem), useheuristic) #Quitar
+
+    """
     (path,cost,visited_cnt,expanded_cnt) = plan(pddl.parse_domain(domain), pddl.parse_problem(problem), useheuristic)
     print("visited nodes:", visited_cnt, "expanded nodes:",expanded_cnt)
     if path is not None:
@@ -41,7 +60,7 @@ def main(domain, problem, useheuristic):
     else:
         print("No plan found")
     print("needed %.2f seconds"%(time.time() - t0))
-    
+    """
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], "-d" not in sys.argv)

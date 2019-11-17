@@ -86,6 +86,7 @@ def make_expression(ast):
     return expressionTree
 
 def recursiveAnalisys(tree, currentNode, data):
+    #print(data)
     if not isinstance(data, tuple):
         if data == "-":
             return
@@ -150,9 +151,17 @@ def make_world(atoms, sets):
             numKeys = numKeys + 1
 
     #Adding to the default dictionary each atom as a tuple to a key
+
     for tuples in atoms:
-        tuple = [tuples[1], tuples[2]]
-        world[tuples[0]].append(tuple)
+        isfirst = True
+        app = []
+        for t in tuples:
+            if isfirst:
+                isfirst = False
+                continue
+            else:
+                app.append(t)
+        world[tuples[0]].append(app.copy())
 
     #print (world)
 
@@ -172,6 +181,15 @@ def models(world, condition):
     result = checkTree(world, condition.getRoot(), condition, [])
 
     return result    
+
+def printNAryTree(node):
+    for child in node.children:
+        print('Father: ', end='')
+        print(child.father.value)
+        print('Child: ', end='')
+        print(child.value)
+        print('')
+        printNAryTree(child)
 
 def checkTree(world, currentNode, tree, substitutes):
 
@@ -245,36 +263,43 @@ def checkTree(world, currentNode, tree, substitutes):
     else:
        # print(len(substitutes))
        # print(currentNode.value + ": ", end="")
-        if len(world[currentNode.value]) > 0:
-            for tuple in world[currentNode.value]:
-                if tuple[0] == currentNode.children[0].value and tuple[1] == currentNode.children[1].value:
-                    print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- TRUE")
-                    return True
-                else:
-                    value1 = ""
-                    value2 = ""
-                    for subs in substitutes:
-                        if currentNode.children[0].value == subs[0]:
-                            value1 = subs[1]
-                    if value1 == "":
-                        value1 = currentNode.children[0].value
+        if currentNode.value in world:
+            if len(world[currentNode.value]) > 0:
+                for tuple in world[currentNode.value]:
+                    if len(tuple) > 1:
 
-                    for subs in substitutes:
-                        if currentNode.children[1].value == subs[0]:
-                            value2 = subs[1]
-                    if value2 == "":
-                        value2 = currentNode.children[1].value
+                        if tuple[0] == currentNode.children[0].value and tuple[1] == currentNode.children[1].value:
+                            print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- TRUE")
+                            return True
+                        else:
+                            value1 = ""
+                            value2 = ""
+                            for subs in substitutes:
+                                if currentNode.children[0].value == subs[0]:
+                                    value1 = subs[1]
+                            if value1 == "":
+                                value1 = currentNode.children[0].value
 
-                    if tuple[0] == value1 and tuple[1] == value2:
-                        print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- TRUE")
+                            for subs in substitutes:
+                                if currentNode.children[1].value == subs[0]:
+                                    value2 = subs[1]
+                            if value2 == "":
+                                value2 = currentNode.children[1].value
+
+                            if tuple[0] == value1 and tuple[1] == value2:
+                                print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- TRUE")
+                                return True
+                            else: 
+                                print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- FALSE")
+
+                    elif tuple[0] == currentNode.children[0].value:
                         return True
-                    else: 
-                        print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- FALSE")
-
-            print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- False")
-            return False
-        else:
-            return False
+                            
+                    
+                print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- False")
+                return False
+            else:
+                return False
     return False
 
 def checkInWorld(startNode, key):
@@ -297,19 +322,27 @@ def substitute(expression, variable, value):
     Do *not* replace the variable in-place, always return a new expression object. When you implement the quantifiers, you should use this same functionality to expand the formula to all possible 
     replacements for the variable that is quantified over.
     """
-    newTree = copy.deepcopy(expression)
 
-    replaceInTree(newTree.getRoot(), variable, value)
 
-    return newTree
+    #*-*--*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-NewTree if things starts to break
+    #newTree = copy.deepcopy(expression)
+    
+    replaceInTree(expression.getRoot(), variable, value)
 
-def replaceInTree(currentNode, key, newValue):                
-    if currentNode.value == key:
+    #printNAryTree(newTree.getRoot())
+
+    return expression
+
+def replaceInTree(currentNode, key, newValue):     
+    if len(currentNode.children) != 0:
+        for subtree in currentNode.children:         
+            replaceInTree(subtree, key, newValue)
+    elif currentNode.value == key:
+        #print(key)
         currentNode.value = newValue
         #print ('Replacing: ' + key + ' to ' + currentNode.value)
 
-    for subtree in currentNode.children:         
-        replaceInTree(subtree, key, newValue) 
+     
 
     return 
     
@@ -379,13 +412,28 @@ def applyToWorld(world, currentNode):
     else:
         #print("Applying " + currentNode.value)
         #print("Adding " + currentNode.value + ": " + "[" + currentNode.children[0].value + "," + currentNode.children[0].value + "]")
-        world[currentNode.value].append([currentNode.children[0].value, currentNode.children[1].value])
+        if len(currentNode.children) > 1:
+            isThere = False
+            for element in world[currentNode.value]:
+                if element == [currentNode.children[0].value, currentNode.children[1].value]:
+                    isThere  = True
+            if not isThere:
+                world[currentNode.value].append([currentNode.children[0].value, currentNode.children[1].value])
+        else:
+            isThere = False
+            for element in world[currentNode.value]:
+                if element == [currentNode.children[0].value]:
+                    isThere  = True
+            if not isThere:
+                world[currentNode.value].append([currentNode.children[0].value])
+            
         return world
     return world
 
 
 if __name__ == "__main__":
     exp = make_expression(("or", ("on", "a", "b"), ("on", "a", "d")))
+    print(exp)
     world = make_world([("on", "a", "b"), ("on", "b", "c"), ("on", "c", "d")], {})
     substitute(exp, "a", "z")
     
