@@ -33,17 +33,16 @@ def plan(domain, problem, useheuristic=True):
     goal = problem[2]
     allPossibleActions = []
     
-    start = graph.PlanNode(problem[1], domain[1], problem[0], [])
+    start = graph.PlanNode(problem[1], domain[1], problem[0], [], 'Root')
     allPossibleActions = start.set_possibleActions(domain[0])
     start.set_initialStates()
     start.get_neighbors(allPossibleActions, domain[0])
 
-    #astar(start, 1, problem[3])
-    
+    pathfinding.astar(start, 1, expressions.make_expression(problem[2]), allPossibleActions, domain[0])
 
-    #print(domain[0])
+    #pathfinding.astar(start, heuristic if useheuristic else pathfinding.default_heuristic, isgoal)
 
-    return None #pathfinding.astar(start, heuristic if useheuristic else pathfinding.default_heuristic, isgoal)
+    return None 
 
 def main(domain, problem, useheuristic):
 

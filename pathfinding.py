@@ -25,7 +25,7 @@ def default_heuristic(n, edge):
     """
     return 0
 
-def astar(start, heuristic, goal):
+def astar(start, heuristic, goal, allActions, actionsDictionary):
     """
     A* search algorithm. The function is passed a start graph.Node object, a heuristic function, and a goal predicate.
     
@@ -46,16 +46,22 @@ def astar(start, heuristic, goal):
         - expanded is the total number of nodes that were expanded (i.e. whose neighbors were added to the frontier)
     """
 
+    #get_neighbors(self, allActions, actionDictionary)
+
     startingPathCost = 0
-    startingHeuristic = heuristic(start, start.get_neighbors()[0])
-    startingPriority = startingPathCost + startingHeuristic
+    #startingHeuristic = heuristic(start, start.get_neighbors(allActions, actionsDictionary)[0])
+    startingPriority = startingPathCost + 0
     
     startingPath = Path(startingPriority, startingPathCost, start)
+
+    print(startingPath)
 
     possiblePaths = PriorityQueue()
     possiblePaths.put(startingPath)
 
     priorityNode = possiblePaths.get()
+
+    print(priorityNode)
 
     priorityNode.visitedNodes.add(priorityNode.node.get_id())
 
@@ -69,7 +75,7 @@ def astar(start, heuristic, goal):
         #print(priorityNode.node.get_id())
         expandedNodesToAdd = []
 
-        for edges in priorityNode.node.get_neighbors():
+        for edges in priorityNode.node.get_neighbors(allActions, actionsDictionary):
 
             if edges.target.get_id() not in priorityNode.visitedNodes:
 

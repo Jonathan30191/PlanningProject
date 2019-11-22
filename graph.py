@@ -1,4 +1,5 @@
 import expressions
+from copy import copy, deepcopy
 
 class Node:
     def get_id(self):
@@ -15,7 +16,8 @@ class Node:
         return self.get_id() == other.get_id()
 
 class PlanNode(Node):
-    def __init__(self, nodeStates, domainTypes, problemTypes, world):
+    def __init__(self, nodeStates, domainTypes, problemTypes, world, name):
+        self.name = name
         self.neighbors = []
         self.initialStates = nodeStates
         self.domainTypes = domainTypes
@@ -40,36 +42,36 @@ class PlanNode(Node):
         
                 
     def set_initialStates(self):
-        print('++++++++++++++++++++++++++World++++++++++++++++++++++++++++++++++++++++')
+        #print('++++++++++++++++++++++++++World++++++++++++++++++++++++++++++++++++++++')
         self.world = expressions.make_world(self.initialStates, self.domainTypes)
-        print(self.world)
-        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        #print(self.world)
+        #print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
 
     def set_possibleActions(self, actions):
         #Actions is a dictionary: {Name: [[parameters] [precondition] [effect]]}
         allActions = {}
         allActionsKeys = actions.keys()
         for k in allActionsKeys:
-            print('')
-            print('')
-            print('------------------------------------', end='')
-            print(k, end = '')
-            print('--------------------------------')
+            #print('')
+            #print('')
+            #print('------------------------------------', end='')
+            #print(k, end = '')
+            #print('--------------------------------')
             allActions[k] = self.createPossibleActions(actions[k][0], actions[k][1])
 
         return allActions
 
     def createPossibleActions(self, parameters, precondition):
-        print('--------------------------------------------------------------------------------')
-        print('Parameters: ',end='')
-        print(parameters)
-        print('--------------------------------------------------------------------------------')
-        print('Precondition: ',end='')
-        print(precondition)
-        print('--------------------------------------------------------------------------------')
-        print('Dom Types: ',end='')
-        print(self.domainTypes)
-        print('--------------------------------------------------------------------------------')
+        #print('--------------------------------------------------------------------------------')
+        #print('Parameters: ',end='')
+        #print(parameters)
+        #print('--------------------------------------------------------------------------------')
+        #print('Precondition: ',end='')
+        #print(precondition)
+        #print('--------------------------------------------------------------------------------')
+        #print('Dom Types: ',end='')
+        #print(self.domainTypes)
+        #print('--------------------------------------------------------------------------------')
 
         parameterKeys = parameters.keys()
         actionList = []
@@ -92,9 +94,9 @@ class PlanNode(Node):
                                     action[toChange] = item
                                     retList.append(action.copy())
                             actionList = retList.copy()
-        print('--------------------------------Possible Actions:', end='')
-        print(len(actionList), end = '')
-        print('--------------------------------')
+        #print('--------------------------------Possible Actions:', end='')
+        #print(len(actionList), end = '')
+        #print('--------------------------------')
         #for act in actionList:
         #    print(act)
         return actionList
@@ -104,23 +106,15 @@ class PlanNode(Node):
     def createNeighbors_PlanNode(self, allPossibleActions, actionsDictionary):
         allKeys = allPossibleActions.keys()
         actionsKeys = actionsDictionary.keys()      
-        print('')
+        #print('')
 
         for key in allKeys:
             #print(actionsDictionary[key][1])
             #print("--------------------------")
             #print(actionsDictionary[key][2])
-
+            expTree = expressions.make_expression(actionsDictionary[key][1])
             for action in allPossibleActions[key]:
                 #print(actionsDictionary[key][1])
-                expTree = expressions.make_expression(actionsDictionary[key][1])
-                for toChange in action.keys():
-                    expTree = expressions.substitute(expTree, toChange, action[toChange])
-                #if(expressions.models(self.world, expTree)):
-                    #expressions.printNAryTree(expTree.getRoot()) 
-                    #-----Changing the precondition to the actual action
-                 #   print('')
-   #########################################################En el if de adentro##############
                 precondition = []
                 neighName = ''
                 neighName = '' + key + '('
@@ -130,25 +124,46 @@ class PlanNode(Node):
                 for ak in allActionKeys:
                     if first:
                         neighName = neighName + action[ak] + ', '
+                        precondition.append((ak,action[ak]))
                         first = False
                     elif second:
                         neighName = neighName + action[ak]
+                        precondition.append((ak,action[ak]))
                         second = False
                     else:
                         neighName = neighName+ ', ' + action[ak]
-
-                    #print('--------NAryTree------')
-                    
-                    #expressions.substitute(expTree, ak, action[ak])
-                    #print('----------------------')
+                        precondition.append((ak,action[ak]))
                 neighName = neighName + ')'
 
-                print(neighName)
-                altWorld = self.world.copy()
-                altWorld = expressions.applyToWorld(altWorld, expTree.getRoot())
-                #print(self.world)
+                tempcopy = deepcopy(expTree)
+                for tuple in precondition:
+                    expressions.substitute(tempcopy, tuple[0], tuple[1])
+                
+               
+                if expressions.models(self.world, tempcopy):
+                    #print('')
+                    #print(neighName)
+                    #print(precondition)
+                    #print(self.world)
+                    tempworld = deepcopy(self.world)
+                    expEffect = expressions.make_expression(actionsDictionary[key][2])
+                    for tuple in precondition:
+                        expressions.substitute(expEffect, tuple[0], tuple[1])
+                    #expressions.printNAryTree(expEffect.getRoot())
+                    expressions.applyToWorld(tempworld, expEffect)
+                    #print(tempworld)
+                    self.neighbors.append(Edge(PlanNode(self.initialStates, self.domainTypes, None, tempworld, neighName), 1, neighName))
+                #else:
+                    #print('It does not models it.')
 
-                self.neighbors.append(Edge(PlanNode(self.initialStates, self.domainTypes, None, self.world.copy()), 1, neighName))
+                #altWorld = self.world.copy()
+                #altWorld = expressions.applyToWorld(altWorld, tempcopy.getRoot())
+                #print(self.world)
+            #for item in self.neighbors:
+            #    print(item.name)
+            #print('---')
+
+                
 
 
 

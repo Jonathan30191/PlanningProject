@@ -1,5 +1,5 @@
 from collections import defaultdict
-import copy
+from copy import copy, deepcopy
 
 class Node:
 
@@ -178,7 +178,7 @@ def models(world, condition):
     
     The return value of this function should be True if the condition holds in the given world, and False otherwise.
     """
-    result = checkTree(world, condition.getRoot(), condition, [])
+    result = checkTree(world, condition.getRoot())
 
     return result    
 
@@ -191,115 +191,108 @@ def printNAryTree(node):
         print('')
         printNAryTree(child)
 
-def checkTree(world, currentNode, tree, substitutes):
+def checkTree(world, currentNode):
 
     if currentNode.value == "and":
         for subtree in currentNode.children:
-            if subtree.value == "when":
-                print(world)
-                print(currentNode.children[0].value)
-                if checkTree(world, currentNode.children[0], tree, substitutes):
-                    print("when true")
-                    applyToWorld(world, subtree)
-            elif not checkTree(world, subtree, tree, substitutes):
-                print("AND: False")
+            if not checkTree(world, subtree):
                 return False
-        print("AND: True")
         return True
     elif currentNode.value == "or":
         for subtree in currentNode.children:
-            if checkTree(world, subtree, tree, substitutes):
-                print("OR: True")
+            if checkTree(world, subtree):
                 return True
-        print("OR: False")
         return False
     elif currentNode.value == "not":
-        print("NOT: ", end="")
-        return not checkTree(world, currentNode.children[0], tree, substitutes)
-    elif currentNode.value == "=":
-        for subtree in currentNode.children:
-            checkTree(world, subtree, tree, substitutes)
-        print("Evaluating =")
+        #print("NOT: ", end="")
+        if not checkTree(world, currentNode.children[0]):
+            return True
+        else:
+            return False
     elif currentNode.value == "imply":
-        print(currentNode.children[0].children[0].value + " " + currentNode.children[0].value + " " + currentNode.children[0].children[1].value +  " implies " + currentNode.children[1].children[0].value + " " + currentNode.children[1].value + " " + currentNode.children[1].children[1].value)
-        if not checkTree(world, currentNode.children[0], tree, substitutes):
-            print(currentNode.children[0].value)
-            print(" True Q")
+        #print(currentNode.children[0].children[0].value + " " + currentNode.children[0].value + " " + currentNode.children[0].children[1].value +  " implies " + currentNode.children[1].children[0].value + " " + currentNode.children[1].value + " " + currentNode.children[1].children[1].value)
+        if not checkTree(world, currentNode.children[0]):
+           #print(currentNode.children[0].value)
+           #print(" True F - > V/F")
             return True
-        elif checkTree(world, currentNode.children[1], tree, substitutes):
-            print(currentNode.children[1].value)
-            print(" True P")
-            return True
-        print(" False")
-        return False
+        elif checkTree(world, currentNode.children[1]) == False:
+            #print(currentNode.children[1].children[0].value + " = " + currentNode.children[1].children[1].value)
+            #print(" False V -> F")
+            return False
+        #print(currentNode.children[1].children[0].value + " = " + currentNode.children[1].children[1].value)
+        #print(" True F -> F")
+        return True
     elif currentNode.value == "when":
-        #print("Evaluating when")
-        #send to Apply
-        return None
-    elif currentNode.value == "exists":
-        for values in world[currentNode.children[0].children[0].value]:
-            #print ("changing: " + currentNode.children[0].value + " for: " + values)
-            for x in substitutes:
-                if x[0] == currentNode.children[0].value:
-                    substitutes.remove(x)
-            substitutes.append((currentNode.children[0].value, values))
-            if checkTree(world, currentNode.children[1], tree, substitutes):
-              #  print("Exists: True")
+       #print("Cheking When")
+        if checkTree(world, currentNode.children[0]):
+               #print("when true")
+                applyToWorld(world, currentNode.children[1])
                 return True
-       # print("Exists: False")
+        return False
+    elif currentNode.value == "exists":
+        if currentNode.children[0].children == None or len(currentNode.children[0].children) == 0:
+            newNode2 = Node('', currentNode)
+            currentNode.children[0].children.append(newNode2)
+        for values in world[currentNode.children[0].children[0].value]:
+           #print("Forall--------------------------------------" + currentNode.children[1].value)
+
+            copyTree = deepcopy(currentNode.children[1])
+            #print("Replacing with: " + currentNode.children[0].value + " with " + values)
+            replaceInTree(copyTree, currentNode.children[0].value, values)
+            #printNAryTree(copyTree)
+            if checkTree(world, copyTree):
+               #print("EXISTS: TRUE")
+                return True
+
+        #print("Exists: False")
         return False
     elif currentNode.value == "forall":
+        if currentNode.children[0].children == None or len(currentNode.children[0].children) == 0:
+            newNode2 = Node('', currentNode)
+            currentNode.children[0].children.append(newNode2)
+        #print(world[currentNode.children[0].children[0].value])
         for values in world[currentNode.children[0].children[0].value]:
-            #print ("changing: " + currentNode.children[0].value + " for: " + values)
-            for x in substitutes:
-                if x[0] == currentNode.children[0].value:
-                    substitutes.remove(x)
-            substitutes.append((currentNode.children[0].value, values))
-            if not checkTree(world, currentNode.children[1], tree, substitutes):
-                print("FORALL: False")
+           #print("Forall--------------------------------------" + currentNode.children[1].value)
+
+            copyTree = deepcopy(currentNode.children[1])
+            replaceInTree(copyTree, currentNode.children[0].value, values)
+            #printNAryTree(copyTree)
+            if not checkTree(world, copyTree):
+               #print("FORALL: False")
                 return False
-        print("FORALL: True")
+
+       #print("FORALL: True")
         return True
+    elif currentNode.value == "=":
+        if currentNode.children[0].value == currentNode.children[1].value:
+           #print('EQUALS TRUE')
+            return True
+       #print('EQUALS FALSE')
+        return False
     else:
        # print(len(substitutes))
        # print(currentNode.value + ": ", end="")
         if currentNode.value in world:
             if len(world[currentNode.value]) > 0:
+                
                 for tuple in world[currentNode.value]:
                     if len(tuple) > 1:
 
                         if tuple[0] == currentNode.children[0].value and tuple[1] == currentNode.children[1].value:
-                            print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- TRUE")
+                           #print(tuple[0] + " = " + currentNode.children[0].value + " and " + tuple[1] + " = " + currentNode.children[1].value + " --- TRUE")
                             return True
-                        else:
-                            value1 = ""
-                            value2 = ""
-                            for subs in substitutes:
-                                if currentNode.children[0].value == subs[0]:
-                                    value1 = subs[1]
-                            if value1 == "":
-                                value1 = currentNode.children[0].value
-
-                            for subs in substitutes:
-                                if currentNode.children[1].value == subs[0]:
-                                    value2 = subs[1]
-                            if value2 == "":
-                                value2 = currentNode.children[1].value
-
-                            if tuple[0] == value1 and tuple[1] == value2:
-                                print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- TRUE")
-                                return True
-                            else: 
-                                print(tuple[0] + "/" + value1 + " and " + tuple[1] + "/" + value2 + " --- FALSE")
 
                     elif tuple[0] == currentNode.children[0].value:
+                       #print(tuple[0] + " = " + currentNode.children[0].value + " --- FALSE 2")
                         return True
-                            
-                    
-                print(tuple[0] + "/" + currentNode.children[0].value + " and " + tuple[1] + "/" + currentNode.children[1].value + " --- False")
+               #print('Not found')
                 return False
             else:
+               #print('Small')
                 return False
+        #else:
+           #print("before outer " + currentNode.value)
+   #print('Outer')
     return False
 
 def checkInWorld(startNode, key):
@@ -341,9 +334,6 @@ def replaceInTree(currentNode, key, newValue):
         #print(key)
         currentNode.value = newValue
         #print ('Replacing: ' + key + ' to ' + currentNode.value)
-
-     
-
     return 
     
     
@@ -367,90 +357,90 @@ def apply(world, effect):
     
     Hint: If your world stores the atoms in a set, you can determine the change of the effect as two sets: an add set and a delete set, and get the atoms for the new world using basic set operations.
     """
-    #print ("world before effect: ")
-    #print (world)
-    world = applyToWorld(world, effect.getRoot())
-    #print ("world after effect: ")
-    #print (world)
-    return world
+    worldRET = deepcopy(world)
 
-def applyToWorld(world, currentNode):
+    return applyToWorld(worldRET, effect.getRoot())
+
+def applyToWorld(retWorld, currentNode):
+
+    if type(currentNode) == nAryTree:
+        currentNode = currentNode.getRoot()
+
     if currentNode.value == "and":
         #print("Applying and")
         for subtree in currentNode.children:
-            applyToWorld(world, subtree)
+            applyToWorld(retWorld, subtree)
     elif currentNode.value == "not":
        # print("Applying not")
-        if len(world[currentNode.children[0].value]) > 0:
-            try:
-                world[currentNode.children[0].value].remove([currentNode.children[0].children[0].value, currentNode.children[0].children[1].value])
-            except Exception as error:
-                print (error)
-           # print("popped")
-            return world
-        else:
-            return world
+        try:
+            if len(currentNode.children[0].children) > 1 and currentNode.children[0].value in retWorld:
+                retWorld[currentNode.children[0].value].remove([currentNode.children[0].children[0].value, currentNode.children[0].children[1].value])
+            elif len(currentNode.children[0].children) == 1 and currentNode.children[0].value in retWorld:
+                retWorld[currentNode.children[0].value].remove([currentNode.children[0].children[0].value])
+        except Exception as error:
+            print (error)
+            
+        return retWorld
     elif currentNode.value == "=":
         for subtree in currentNode.children:
-            checkTree(world, subtree)
+            checkTree(retWorld, subtree)
         #print("Applying =")
     elif currentNode.value == "imply":
         for subtree in currentNode.children:
-            checkTree(world, subtree)
+            checkTree(retWorld, subtree)
         #print("Applying imply")
     elif currentNode.value == "when":
-        print("Applying when")
-        applyToWorld(world, currentNode.children[1])
+       #print('CHEKING WHEN')
+       #print(currentNode.children[0].value)
+       #print(currentNode.value)
+        #print(retWorld)
+       #print(checkTree(retWorld, currentNode.children[0]))
+        if checkTree(retWorld, currentNode.children[0]):
+               #print("when true")
+                applyToWorld(retWorld, currentNode.children[1])
     elif currentNode.value == "exists":
         for subtree in currentNode.children:
-            checkTree(world, subtree)
+            checkTree(retWorld, subtree)
         #print("Applying exists")
     elif currentNode.value == "forall":
         for subtree in currentNode.children:
-            checkTree(world, subtree)
+            checkTree(retWorld, subtree)
         #print("Applying forall")
     else:
         #print("Applying " + currentNode.value)
         #print("Adding " + currentNode.value + ": " + "[" + currentNode.children[0].value + "," + currentNode.children[0].value + "]")
         if len(currentNode.children) > 1:
             isThere = False
-            for element in world[currentNode.value]:
+            for element in retWorld[currentNode.value]:
                 if element == [currentNode.children[0].value, currentNode.children[1].value]:
                     isThere  = True
             if not isThere:
-                world[currentNode.value].append([currentNode.children[0].value, currentNode.children[1].value])
+                retWorld[currentNode.value].append([currentNode.children[0].value, currentNode.children[1].value])
         else:
             isThere = False
-            for element in world[currentNode.value]:
+            for element in retWorld[currentNode.value]:
                 if element == [currentNode.children[0].value]:
                     isThere  = True
             if not isThere:
-                world[currentNode.value].append([currentNode.children[0].value])
+                retWorld[currentNode.value].append([currentNode.children[0].value])
             
-        return world
-    return world
+        return retWorld
+    return retWorld
 
 
 if __name__ == "__main__":
     exp = make_expression(("or", ("on", "a", "b"), ("on", "a", "d")))
-    print(exp)
     world = make_world([("on", "a", "b"), ("on", "b", "c"), ("on", "c", "d")], {})
-    substitute(exp, "a", "z")
     
+    print("Should be True: ")
     print(models(world, exp))
-    print("Should be True: ", end="")
-
-    print("---------------------------------------------------------------------")
-
+    
     change = make_expression(["and", ("not", ("on", "a", "b")), ("on", "a", "c")])
     
-    
+    print("Should be False: ")
     print(models(apply(world, change), exp))
-    print("Should be False: ", end="")
 
-    print("---------------------------------------------------------------------")
-    
-    print("mickey/minny example")
+
     world = make_world([("at", "store", "mickey"), ("at", "airport", "minny")], {"Locations": ["home", "park", "store", "airport", "theater"], "": ["home", "park", "store", "airport", "theater", "mickey", "minny"]})
     exp = make_expression(("and", 
         ("not", ("at", "park", "mickey")), 
@@ -466,30 +456,27 @@ if __name__ == "__main__":
                             ("imply",
                                     ("at", "?l", "mickey"),
                                     ("at", "?l", "minny"))))))
-                                    
+    
+    print("Should be True:")
     print(models(world, exp))
-    print("Should be True: ", end="")
 
-    print("---------------------------------------------------------------------")
+    
     
     become_friends = make_expression(("friends", "mickey", "minny"))
     friendsworld = apply(world, become_friends)
     
+    print("Should be False:")
     print(models(friendsworld, exp))
-    print("Should be False: ", end="")
-    print("---------------------------------------------------------------------")
 
     
     move_minny = make_expression(("and", ("at", "store", "minny"), ("not", ("at", "airport", "minny"))))
-    
     movedworld = apply(friendsworld, move_minny)
     
+    print("Should be True: ")
     print(models(movedworld, exp))
-    print("Should be True: ", end="")
-    print("---------------------------------------------------------------------")
 
 
-
+    
     
     move_both_cond = make_expression(("and", 
                                            ("at", "home", "mickey"), 
@@ -501,16 +488,18 @@ if __name__ == "__main__":
                                                       ("not", ("at", "store", "minny"))))))
                                                       
     
-    print(movedworld)
-    print(models(apply(movedworld, move_both_cond), exp))
-    print("Should be True: ", end="")
-    print(movedworld)
-    print("---------------------------------------------------------------------")
     
-    print(models(apply(friendsworld, move_both_cond), exp))
-    print("Should be False: ", end="")
-    print("---------------------------------------------------------------------")
-    '''
+    print("-Should be True: ")
+    movedworld = apply(movedworld, move_both_cond)
+    print(models(movedworld, exp))
+    
+
+    print("Should be False: ")
+
+    friendsworld = apply(friendsworld, move_both_cond)
+    print(models(friendsworld, exp))
+    
+    
     
     exp1 = make_expression(("forall", 
                             ("?l", "-", "Locations"),
@@ -521,9 +510,12 @@ if __name__ == "__main__":
                                                ("at", "?l1", "minny")),
                                        ("=", "?l", "?l1")))))
                                        
-    print("Should be True: ", end="")
-    print(models(apply(movedworld, move_both_cond), exp1))
+    print("Should be True: ")
+    movedworld = apply(movedworld, move_both_cond)
+    print(models(movedworld, exp1))
     
-    print("Should be False: ", end="")
-    print(models(apply(friendsworld, move_both_cond), exp1))
-    '''
+    
+    print("Should be False: ")
+    friendsworld = apply(friendsworld, move_both_cond)
+    print(models(friendsworld, exp1))
+    
