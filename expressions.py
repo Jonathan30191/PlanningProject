@@ -72,7 +72,7 @@ def make_expression(ast):
     """
 
     if isinstance(ast[0], tuple):
-        #print('Invalid Start of Expression')
+        print('Invalid Start of Expression')
         return None
     #Set the root
     expressionTree = nAryTree(ast[0])

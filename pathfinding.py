@@ -1,6 +1,7 @@
 import graph
 from queue import PriorityQueue
 import copy
+import expressions
 
 class Path():
        def __init__(self, priority, pathCost, node):
@@ -54,21 +55,20 @@ def astar(start, heuristic, goal, allActions, actionsDictionary):
     
     startingPath = Path(startingPriority, startingPathCost, start)
 
-    print(startingPath)
-
     possiblePaths = PriorityQueue()
     possiblePaths.put(startingPath)
 
     priorityNode = possiblePaths.get()
-
-    print(priorityNode)
 
     priorityNode.visitedNodes.add(priorityNode.node.get_id())
 
     expandedNodes = 0
     numFrontier = 0
 
-    while not goal(priorityNode.node):
+    if expressions.models(priorityNode.node.world, goal):
+        return priorityNode.edgesPassed, priorityNode.currentPathCost, numFrontier, expandedNodes
+
+    while not expressions.models(priorityNode.node.world, goal):
         expandedNodes = expandedNodes + 1
 
         #print("------------Expanding: ",end='')    
@@ -78,9 +78,9 @@ def astar(start, heuristic, goal, allActions, actionsDictionary):
         for edges in priorityNode.node.get_neighbors(allActions, actionsDictionary):
 
             if edges.target.get_id() not in priorityNode.visitedNodes:
-
+                #print(type(priorityNode.node),type(edges))
                 currentPathCost = priorityNode.currentPathCost + edges.cost
-                currentHeuristic = heuristic(priorityNode.node, edges)
+                currentHeuristic = 0 #heuristic(priorityNode.node, edges) HEURISTICA!!!!!!!!!!!!!
                 currentPriority = currentPathCost + currentHeuristic
 
                 currentPath = Path(currentPriority, currentPathCost, edges.target)

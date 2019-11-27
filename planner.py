@@ -29,18 +29,18 @@ def plan(domain, problem, useheuristic=True):
 
     #Problem = [typesDictionary, initialStates, rawGoals, ExpressionGoal]
     #Domain = [actionsDictionary, typesDictionary]
-
-    goal = problem[2]
+    goal = expressions.make_expression(problem[2][0])
     allPossibleActions = []
+
+    #expressions.printNAryTree(goal.getRoot())
     
     start = graph.PlanNode(problem[1], domain[1], problem[0], [], 'Root')
     allPossibleActions = start.set_possibleActions(domain[0])
     start.set_initialStates()
     start.get_neighbors(allPossibleActions, domain[0])
 
-    pathfinding.astar(start, 1, expressions.make_expression(problem[2]), allPossibleActions, domain[0])
-
-    #pathfinding.astar(start, heuristic if useheuristic else pathfinding.default_heuristic, isgoal)
+    #astar(start, heuristic, goal, allActions, actionsDictionary)
+    pathfinding.print_path(pathfinding.astar(start, 1, goal, allPossibleActions, domain[0])) 
 
     return None 
 
@@ -48,6 +48,9 @@ def main(domain, problem, useheuristic):
 
     t0 = time.time()
     plan(pddl.parse_domain(domain), pddl.parse_problem(problem), useheuristic) #Quitar
+
+    print("Total time: ", end='')
+    print(time.time() - t0)
 
     """
     (path,cost,visited_cnt,expanded_cnt) = plan(pddl.parse_domain(domain), pddl.parse_problem(problem), useheuristic)

@@ -100,8 +100,6 @@ class PlanNode(Node):
         #for act in actionList:
         #    print(act)
         return actionList
-        
-
 
     def createNeighbors_PlanNode(self, allPossibleActions, actionsDictionary):
         allKeys = allPossibleActions.keys()
