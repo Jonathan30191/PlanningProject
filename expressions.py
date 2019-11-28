@@ -155,13 +155,16 @@ def make_world(atoms, sets):
     for tuples in atoms:
         isfirst = True
         app = []
-        for t in tuples:
-            if isfirst:
-                isfirst = False
-                continue
-            else:
-                app.append(t)
-        world[tuples[0]].append(app.copy())
+        if len(tuples) == 1:
+            world[''].append(tuples[0])
+        else:
+            for t in tuples:
+                if isfirst:
+                    isfirst = False
+                    continue
+                else:
+                    app.append(t)
+            world[tuples[0]].append(app.copy())
 
     #print (world)
 
@@ -178,6 +181,7 @@ def models(world, condition):
     
     The return value of this function should be True if the condition holds in the given world, and False otherwise.
     """
+    
     result = checkTree(world, condition.getRoot())
 
     return result    
@@ -192,7 +196,7 @@ def printNAryTree(node):
         printNAryTree(child)
 
 def checkTree(world, currentNode):
-
+    
     if currentNode.value == "and":
         for subtree in currentNode.children:
             if not checkTree(world, subtree):
@@ -236,7 +240,7 @@ def checkTree(world, currentNode):
         for values in world[currentNode.children[0].children[0].value]:
            #print("Forall--------------------------------------" + currentNode.children[1].value)
 
-            copyTree = deepcopy(currentNode.children[1])
+            copyTree = copy(currentNode.children[1])
             #print("Replacing with: " + currentNode.children[0].value + " with " + values)
             replaceInTree(copyTree, currentNode.children[0].value, values)
             #printNAryTree(copyTree)
@@ -254,7 +258,7 @@ def checkTree(world, currentNode):
         for values in world[currentNode.children[0].children[0].value]:
            #print("Forall--------------------------------------" + currentNode.children[1].value)
 
-            copyTree = deepcopy(currentNode.children[1])
+            copyTree = copy(currentNode.children[1])
             replaceInTree(copyTree, currentNode.children[0].value, values)
             #printNAryTree(copyTree)
             if not checkTree(world, copyTree):
@@ -270,9 +274,20 @@ def checkTree(world, currentNode):
        #print('EQUALS FALSE')
         return False
     else:
-       # print(len(substitutes))
-       # print(currentNode.value + ": ", end="")
-        if currentNode.value in world:
+       
+        if len(currentNode.children) == 0 or currentNode.children == None or currentNode.children == []:
+
+            #print(currentNode.value)
+            if currentNode.value in world['']:
+                #print(currentNode.value, end='')
+                #print(' found')
+                return True
+            else:
+                #print(currentNode.value, end='')
+                #print(' not found in world')
+                #print(world)
+                return False
+        elif currentNode.value in world:
             if len(world[currentNode.value]) > 0:
                 
                 for tuple in world[currentNode.value]:
@@ -294,6 +309,72 @@ def checkTree(world, currentNode):
            #print("before outer " + currentNode.value)
    #print('Outer')
     return False
+
+
+def goalsAchieved(world, currentNode, goals):
+    if currentNode.value == "and" or currentNode.value == "or":
+        for subtree in currentNode.children:
+            if checkTree(world, subtree):
+                goals += 1
+    elif currentNode.value == "not":
+        if not checkTree(world, currentNode.children[0]):
+            return True
+        else:
+            return False
+    elif currentNode.value == "imply":
+        if not checkTree(world, currentNode.children[0]):
+            return True
+        elif checkTree(world, currentNode.children[1]) == False:
+            return False
+        return True
+    elif currentNode.value == "when":
+        if checkTree(world, currentNode.children[0]):
+                applyToWorld(world, currentNode.children[1])
+                return True
+        return False
+    elif currentNode.value == "exists":
+        if currentNode.children[0].children == None or len(currentNode.children[0].children) == 0:
+            newNode2 = Node('', currentNode)
+            currentNode.children[0].children.append(newNode2)
+        for values in world[currentNode.children[0].children[0].value]:
+            copyTree = copy(currentNode.children[1])
+            replaceInTree(copyTree, currentNode.children[0].value, values)
+            if checkTree(world, copyTree):
+                return True
+        return False
+    elif currentNode.value == "forall":
+        if currentNode.children[0].children == None or len(currentNode.children[0].children) == 0:
+            newNode2 = Node('', currentNode)
+            currentNode.children[0].children.append(newNode2)
+        for values in world[currentNode.children[0].children[0].value]:
+            copyTree = copy(currentNode.children[1])
+            replaceInTree(copyTree, currentNode.children[0].value, values)
+            if not checkTree(world, copyTree):
+                return False
+        return True
+    elif currentNode.value == "=":
+        if currentNode.children[0].value == currentNode.children[1].value:
+            return True
+        return False
+    else:
+        if len(currentNode.children) == 0 or currentNode.children == None or currentNode.children == []:
+            if currentNode.value in world['']:
+                return True
+            else:
+                return False
+        elif currentNode.value in world:
+            if len(world[currentNode.value]) > 0:
+                for tuple in world[currentNode.value]:
+                    if len(tuple) > 1:
+                        if tuple[0] == currentNode.children[0].value and tuple[1] == currentNode.children[1].value:
+                            return True
+                    elif tuple[0] == currentNode.children[0].value:
+                        return True
+                return False
+            else:
+                return False
+    return goals
+
 
 def checkInWorld(startNode, key):
     result = []                   
@@ -357,29 +438,37 @@ def apply(world, effect):
     
     Hint: If your world stores the atoms in a set, you can determine the change of the effect as two sets: an add set and a delete set, and get the atoms for the new world using basic set operations.
     """
-    worldRET = deepcopy(world)
+    worldRET = copy(world)
+    
 
     return applyToWorld(worldRET, effect.getRoot())
 
-def applyToWorld(retWorld, currentNode):
-
+def applyToWorld(retWorld, currentNode, useheuristic):
     if type(currentNode) == nAryTree:
         currentNode = currentNode.getRoot()
+    elif type(currentNode) == list:
+        #print("Adding" + currentNode[0])
+        #print(retWorld[''])
+        retWorld[''].append(currentNode[0])
+        #print(retWorld[''])
+        #print('--------------')
+        return retWorld
 
     if currentNode.value == "and":
         #print("Applying and")
         for subtree in currentNode.children:
-            applyToWorld(retWorld, subtree)
+            applyToWorld(retWorld, subtree, useheuristic)
     elif currentNode.value == "not":
-       # print("Applying not")
-        try:
-            if len(currentNode.children[0].children) > 1 and currentNode.children[0].value in retWorld:
-                retWorld[currentNode.children[0].value].remove([currentNode.children[0].children[0].value, currentNode.children[0].children[1].value])
-            elif len(currentNode.children[0].children) == 1 and currentNode.children[0].value in retWorld:
-                retWorld[currentNode.children[0].value].remove([currentNode.children[0].children[0].value])
-        except Exception as error:
-            print (error)
-            
+        #print("Applying not")
+        if not useheuristic:
+            try:
+                if len(currentNode.children[0].children) > 1 and currentNode.children[0].value in retWorld:
+                    retWorld[currentNode.children[0].value].remove([currentNode.children[0].children[0].value, currentNode.children[0].children[1].value])
+                elif len(currentNode.children[0].children) == 1 and currentNode.children[0].value in retWorld:
+                    retWorld[currentNode.children[0].value].remove([currentNode.children[0].children[0].value])
+            except Exception as error:
+                print (error)
+
         return retWorld
     elif currentNode.value == "=":
         for subtree in currentNode.children:
@@ -397,7 +486,7 @@ def applyToWorld(retWorld, currentNode):
        #print(checkTree(retWorld, currentNode.children[0]))
         if checkTree(retWorld, currentNode.children[0]):
                #print("when true")
-                applyToWorld(retWorld, currentNode.children[1])
+                applyToWorld(retWorld, currentNode.children[1], useheuristic)
     elif currentNode.value == "exists":
         for subtree in currentNode.children:
             checkTree(retWorld, subtree)
@@ -409,6 +498,7 @@ def applyToWorld(retWorld, currentNode):
     else:
         #print("Applying " + currentNode.value)
         #print("Adding " + currentNode.value + ": " + "[" + currentNode.children[0].value + "," + currentNode.children[0].value + "]")
+
         if len(currentNode.children) > 1:
             isThere = False
             for element in retWorld[currentNode.value]:
@@ -422,7 +512,12 @@ def applyToWorld(retWorld, currentNode):
                 if element == [currentNode.children[0].value]:
                     isThere  = True
             if not isThere:
-                retWorld[currentNode.value].append([currentNode.children[0].value])
+                #print(currentNode.children)
+                #print(currentNode.value)
+                if len(currentNode.children) == 0:
+                    retWorld[''].append(currentNode.value)
+                else:
+                    retWorld[currentNode.value].append([currentNode.children[0].value])
             
         return retWorld
     return retWorld

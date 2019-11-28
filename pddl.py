@@ -27,23 +27,26 @@ def parse_domain(fname):
     isAction = False
 
     for element in dataD:
-        #print(element)
-        temporalList.append(element)
-        if element == ':action':
-            isAction = True
-        if element == ')':
-            popping = True
-            temporalList.pop()
-            abstractSyntaxTree.append([])
-            while popping:
-                if temporalList[-1] == '(':
-                    popping = False
-                    temporalList.pop()
-                    temporalList.append(list(reversed(abstractSyntaxTree.pop())))
-                else:
-                    abstractSyntaxTree[-1].append(temporalList.pop())
-    #print('-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-')
+        if not element == ';;':
+            temporalList.append(element)
+            if element == ':action':
+                isAction = True
+            if element == ')':
+                popping = True
+                temporalList.pop()
+                abstractSyntaxTree.append([])
+                while popping:
+                    if temporalList[-1] == '(':
+                        popping = False
+                        temporalList.pop()
+                        temporalList.append(list(reversed(abstractSyntaxTree.pop())))
+                    else:
+                        abstractSyntaxTree[-1].append(temporalList.pop())
     abstractSyntaxTree = temporalList
+
+
+    #print('-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-')
+    
     #print(abstractSyntaxTree)
     #print('-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-')
 
@@ -116,9 +119,9 @@ def parse_domain(fname):
 
         elif item == ':predicates':
             #print(actionsDictionary.keys())
-            print('----   Predicates   ----')
+            #print('----   Predicates   ----')
             #Optional
-            print('Not Yet')
+            print('')
         elif item == ':action':
             #Creates a new key/set in the dictionary [[Name, [parameters], [preconditions], [effects]], [...], ...]
             actionsDictionary[element[1]] = [[],[],[]]
@@ -166,7 +169,7 @@ def parse_domain(fname):
                     actDic[2] = listToTuple(element[i])
                     #print(actDic[2])
                     #print('---------------------------------')
-
+    #print(actionsDictionary)
     return [actionsDictionary, typesDictionary] 
     
 def parse_problem(fname):
@@ -186,20 +189,21 @@ def parse_problem(fname):
     pushing = True
     for element in dataP:
         #print(element)
-        temporalList.append(element)
-        if element == ':action':
-            isAction = True
-        if element == ')':
-            popping = True
-            temporalList.pop()
-            abstractSyntaxTreeP.append([])
-            while popping:
-                if temporalList[-1] == '(':
-                    popping = False
-                    temporalList.pop()
-                    temporalList.append(list(reversed(abstractSyntaxTreeP.pop())))
-                else:
-                    abstractSyntaxTreeP[-1].append(temporalList.pop())
+        if not element == ';;':
+            temporalList.append(element)
+            if element == ':action':
+                isAction = True
+            if element == ')':
+                popping = True
+                temporalList.pop()
+                abstractSyntaxTreeP.append([])
+                while popping:
+                    if temporalList[-1] == '(':
+                        popping = False
+                        temporalList.pop()
+                        temporalList.append(list(reversed(abstractSyntaxTreeP.pop())))
+                    else:
+                        abstractSyntaxTreeP[-1].append(temporalList.pop())
     abstractSyntaxTreeP = temporalList
     #print(abstractSyntaxTreeP)
     #------------------------------------------------------------------------- Identifying Parts
@@ -228,7 +232,7 @@ def parse_problem(fname):
             #print('----------------------Initial States----------------------')
             for i in element:
                 if i != ':init':
-                        initialStates.append(tuple(i))
+                    initialStates.append(tuple(i))
             #print(initialStates)
 
         elif item == ':goal':
@@ -272,11 +276,13 @@ def setObjects(element, typesDictionary):
     constants = []
     typesDictionary[''] = set()
     settingKey = False
-
+    finalIndex = 0
+    
     for currentConstant in element:
         if currentConstant == '-':
             settingKey = True
         elif currentConstant == ':objects':
+            finalIndex += 1
             continue                    
         elif settingKey:
             typesDictionary[currentConstant] = set() 
@@ -286,8 +292,16 @@ def setObjects(element, typesDictionary):
                 setDic.add(c)
                 typesDictionary[''].add(c)
             settingKey = False
+        elif finalIndex == (len(element)-1):
+            typesDictionary[''] = set() 
+            setDic = typesDictionary['']
+            while len(constants) > 0:
+                c = constants.pop()
+                setDic.add(c)
+                typesDictionary[''].add(c)
         else:
             constants.append(currentConstant)
+        finalIndex += 1
     #print(typesDictionary)
     
 if __name__ == "__main__":

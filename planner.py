@@ -21,15 +21,26 @@ def plan(domain, problem, useheuristic=True):
        - visited is the total number of nodes that were added to the frontier during the execution of the algorithm 
        - expanded is the total number of nodes that were expanded (i.e. whose neighbors were added to the frontier)
     """
+
+    goal = expressions.make_expression(problem[2][0])
+
     def heuristic(state, action):
-        return pathfinding.default_heuristic
+        num = 1
+        num = expressions.goalsAchieved(action.target.world, goal.getRoot(), num)
+        num = 1/num
+        #print(num)
+        neighNum = len(state.neighbors)
+        #print(neighNum)
+        return num
         
     def isgoal(state):
         return True
 
     #Problem = [typesDictionary, initialStates, rawGoals, ExpressionGoal]
     #Domain = [actionsDictionary, typesDictionary]
-    goal = expressions.make_expression(problem[2][0])
+    #print(problem[1])
+    
+    #expressions.printNAryTree(goal.getRoot())
     allPossibleActions = []
 
     #expressions.printNAryTree(goal.getRoot())
@@ -37,23 +48,31 @@ def plan(domain, problem, useheuristic=True):
     start = graph.PlanNode(problem[1], domain[1], problem[0], [], 'Root')
     allPossibleActions = start.set_possibleActions(domain[0])
     start.set_initialStates()
-    start.get_neighbors(allPossibleActions, domain[0])
-
+    start.get_neighbors(allPossibleActions, domain[0], useheuristic)
+    #for n in start.neighbors:
+    #    print(n.name)
+    #print(allPossibleActions)
     #astar(start, heuristic, goal, allActions, actionsDictionary)
-    pathfinding.print_path(pathfinding.astar(start, 1, goal, allPossibleActions, domain[0])) 
+    #input("Press Enter to continue...")
+    #print(useheuristic)
+    edgesPassed, totalPathCost, numFront, numExpandedNodes = pathfinding.astar(start, heuristic if useheuristic else pathfinding.default_heuristic, goal, allPossibleActions, domain[0], useheuristic)
+    #returns priorityNode.edgesPassed, priorityNode.currentPathCost, numFrontier, expandedNodes
 
-    return None 
+    return edgesPassed, len(edgesPassed), numFront, numExpandedNodes 
 
 def main(domain, problem, useheuristic):
 
     t0 = time.time()
-    plan(pddl.parse_domain(domain), pddl.parse_problem(problem), useheuristic) #Quitar
-
-    print("Total time: ", end='')
-    print(time.time() - t0)
-
-    """
+    
     (path,cost,visited_cnt,expanded_cnt) = plan(pddl.parse_domain(domain), pddl.parse_problem(problem), useheuristic)
+    if useheuristic:
+        print('')
+        print('using heuristic')
+        print('')
+    else: 
+        print('')
+        print('without heuristic')
+        print('')
     print("visited nodes:", visited_cnt, "expanded nodes:",expanded_cnt)
     if path is not None:
         print("Plan found with cost", cost)
@@ -62,7 +81,7 @@ def main(domain, problem, useheuristic):
     else:
         print("No plan found")
     print("needed %.2f seconds"%(time.time() - t0))
-    """
+    
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], "-d" not in sys.argv)

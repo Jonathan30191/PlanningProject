@@ -26,7 +26,7 @@ def default_heuristic(n, edge):
     """
     return 0
 
-def astar(start, heuristic, goal, allActions, actionsDictionary):
+def astar(start, heuristic, goal, allActions, actionsDictionary, useheuristic):
     """
     A* search algorithm. The function is passed a start graph.Node object, a heuristic function, and a goal predicate.
     
@@ -50,8 +50,8 @@ def astar(start, heuristic, goal, allActions, actionsDictionary):
     #get_neighbors(self, allActions, actionDictionary)
 
     startingPathCost = 0
-    #startingHeuristic = heuristic(start, start.get_neighbors(allActions, actionsDictionary)[0])
-    startingPriority = startingPathCost + 0
+    startingHeuristic = 0
+    startingPriority = startingPathCost + startingHeuristic
     
     startingPath = Path(startingPriority, startingPathCost, start)
 
@@ -69,25 +69,27 @@ def astar(start, heuristic, goal, allActions, actionsDictionary):
         return priorityNode.edgesPassed, priorityNode.currentPathCost, numFrontier, expandedNodes
 
     while not expressions.models(priorityNode.node.world, goal):
+
         expandedNodes = expandedNodes + 1
 
         #print("------------Expanding: ",end='')    
         #print(priorityNode.node.get_id())
         expandedNodesToAdd = []
-
-        for edges in priorityNode.node.get_neighbors(allActions, actionsDictionary):
-
+        for edges in priorityNode.node.get_neighbors(allActions, actionsDictionary, useheuristic):
+            #print(edges.target.get_id())
+            #print(priorityNode.visitedNodes)
             if edges.target.get_id() not in priorityNode.visitedNodes:
                 #print(type(priorityNode.node),type(edges))
                 currentPathCost = priorityNode.currentPathCost + edges.cost
-                currentHeuristic = 0 #heuristic(priorityNode.node, edges) HEURISTICA!!!!!!!!!!!!!
+                currentHeuristic = heuristic(priorityNode.node, edges)
+                #print(currentHeuristic)
                 currentPriority = currentPathCost + currentHeuristic
 
                 currentPath = Path(currentPriority, currentPathCost, edges.target)
                 currentPath.nodesVisited = priorityNode.nodesVisited + 1 
-                currentPath.edgesPassed = copy.deepcopy(priorityNode.edgesPassed)
+                currentPath.edgesPassed = copy.copy(priorityNode.edgesPassed)
                 currentPath.edgesPassed.append(edges)
-                currentPath.visitedNodes = copy.deepcopy(priorityNode.visitedNodes)
+                currentPath.visitedNodes = copy.copy(priorityNode.visitedNodes)
                 expandedNodesToAdd.append(currentPath)
         
         for nodesToAdd in expandedNodesToAdd:

@@ -25,8 +25,9 @@ class PlanNode(Node):
             self.set_types(problemTypes)
         self.world = world
 
-    def get_neighbors(self, allActions, actionDictionary):
-        self.createNeighbors_PlanNode(allActions, actionDictionary)
+    def get_neighbors(self, allActions, actionDictionary, useheuristic):
+        
+        self.createNeighbors_PlanNode(allActions, actionDictionary, useheuristic)
         return self.neighbors
 
     def get_id(self):
@@ -34,8 +35,13 @@ class PlanNode(Node):
     
     def set_types(self, problemTypes):
         allKeys = problemTypes.keys()
+
         for key in allKeys:
-            setDic = self.domainTypes[key]
+            if not key in self.domainTypes:
+                self.domainTypes[''] = set()
+                setDic = self.domainTypes[key]
+            else:
+                setDic = self.domainTypes[key]
             
             for value in problemTypes[key]:
                 setDic.add(value)
@@ -101,65 +107,107 @@ class PlanNode(Node):
         #    print(act)
         return actionList
 
-    def createNeighbors_PlanNode(self, allPossibleActions, actionsDictionary):
+    def createNeighbors_PlanNode(self, allPossibleActions, actionsDictionary, useheuristic):
         allKeys = allPossibleActions.keys()
         actionsKeys = actionsDictionary.keys()      
         #print('')
+        #print(allPossibleActions)
+        #print(actionsKeys)
 
         for key in allKeys:
+            #print(key)
             #print(actionsDictionary[key][1])
             #print("--------------------------")
             #print(actionsDictionary[key][2])
             expTree = expressions.make_expression(actionsDictionary[key][1])
-            for action in allPossibleActions[key]:
-                #print(actionsDictionary[key][1])
-                precondition = []
+
+            if len(allPossibleActions[key]) < 1:
                 neighName = ''
-                neighName = '' + key + '('
-                first = True
-                second = True
-                allActionKeys = action.keys()
-                for ak in allActionKeys:
-                    if first:
-                        neighName = neighName + action[ak] + ', '
-                        precondition.append((ak,action[ak]))
-                        first = False
-                    elif second:
-                        neighName = neighName + action[ak]
-                        precondition.append((ak,action[ak]))
-                        second = False
-                    else:
-                        neighName = neighName+ ', ' + action[ak]
-                        precondition.append((ak,action[ak]))
-                neighName = neighName + ')'
-
-                tempcopy = deepcopy(expTree)
-                for tuple in precondition:
-                    expressions.substitute(tempcopy, tuple[0], tuple[1])
-                
-               
-                if expressions.models(self.world, tempcopy):
-                    #print('')
-                    #print(neighName)
-                    #print(precondition)
-                    #print(self.world)
+                neighName = '' + key + '()'
+                precondition = []
+                #print(neighName)
+                if expressions.models(self.world, expTree):
+                    #print('models')
                     tempworld = deepcopy(self.world)
-                    expEffect = expressions.make_expression(actionsDictionary[key][2])
-                    for tuple in precondition:
-                        expressions.substitute(expEffect, tuple[0], tuple[1])
-                    #expressions.printNAryTree(expEffect.getRoot())
-                    expressions.applyToWorld(tempworld, expEffect)
-                    #print(tempworld)
-                    self.neighbors.append(Edge(PlanNode(self.initialStates, self.domainTypes, None, tempworld, neighName), 1, neighName))
+                    if len(actionsDictionary[key][2]) == 1:
+                        expEffect = actionsDictionary[key][2]
+                        expressions.applyToWorld(tempworld, expEffect, useheuristic)
+                        self.neighbors.append(Edge(PlanNode(self.initialStates, self.domainTypes, None, tempworld, neighName), 1, neighName))
+                    else:
+                        expEffect = expressions.make_expression(actionsDictionary[key][2])
+                        for tuple in precondition:
+                            expressions.substitute(expEffect, tuple[0], tuple[1])
+                        expressions.applyToWorld(tempworld, expEffect, useheuristic)
+                        self.neighbors.append(Edge(PlanNode(self.initialStates, self.domainTypes, None, tempworld, neighName), 1, neighName))
                 #else:
-                    #print('It does not models it.')
+                    #print(self.world)
+                    #print('Does not models')
 
-                #altWorld = self.world.copy()
-                #altWorld = expressions.applyToWorld(altWorld, tempcopy.getRoot())
-                #print(self.world)
-            #for item in self.neighbors:
-            #    print(item.name)
-            #print('---')
+            else:
+                for action in allPossibleActions[key]:
+                
+                    #print(actionsDictionary[key][1])
+                    precondition = []
+                    neighName = ''
+                    neighName = '' + key + '('
+                    first = True
+                    second = True
+                    allActionKeys = action.keys()
+                    for ak in allActionKeys:
+                        if first:
+                            neighName = neighName + action[ak] + ', '
+                            precondition.append((ak,action[ak]))
+                            first = False
+                        elif second:
+                            neighName = neighName + action[ak]
+                            precondition.append((ak,action[ak]))
+                            second = False
+                        else:
+                            neighName = neighName+ ', ' + action[ak]
+                            precondition.append((ak,action[ak]))
+                    neighName = neighName + ')'
+
+                    tempcopy = deepcopy(expTree)
+                    for tuple in precondition:
+                        expressions.substitute(tempcopy, tuple[0], tuple[1])
+                
+                    #print(neighName)
+                    if expressions.models(self.world, tempcopy):
+                        #print('')
+                        #print(neighName)
+                        #print(precondition)
+                        #print(self.world)
+                        tempworld = deepcopy(self.world)
+
+
+
+                        #print('Applying: ')
+
+                        if len(actionsDictionary[key][2]) == 1:
+                            expEffect = actionsDictionary[key][2]
+                            #print(tempworld)
+                            expressions.applyToWorld(tempworld, expEffect, useheuristic)
+                            #print(tempworld)
+                            self.neighbors.append(Edge(PlanNode(self.initialStates, self.domainTypes, None, tempworld, neighName), 1, neighName))
+                        else:
+                            #print(tempworld)
+                            expEffect = expressions.make_expression(actionsDictionary[key][2])
+                            for tuple in precondition:
+                                expressions.substitute(expEffect, tuple[0], tuple[1])
+                            expressions.applyToWorld(tempworld, expEffect, useheuristic)
+                            #print(tempworld)
+                            self.neighbors.append(Edge(PlanNode(self.initialStates, self.domainTypes, None, tempworld, neighName), 1, neighName))
+            #input("Press Enter to continue...")
+                    #else:
+                        #print('It does not models it.')
+
+                    #altWorld = self.world.copy()
+                    #altWorld = expressions.applyToWorld(altWorld, tempcopy.getRoot())
+                    #print(self.world)
+                #for item in self.neighbors:
+                #    print(
+                #    item.name)
+                #print('---')
 
                 
 
